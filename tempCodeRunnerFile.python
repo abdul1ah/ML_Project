@@ -1,0 +1,24 @@
+import os
+import pandas as pd
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+
+# Load the original files
+movies_df = pd.read_csv(os.path.join(BASE_DIR, "Data", "movies.csv"))
+mapping_df = pd.read_csv(os.path.join(BASE_DIR, "Data", "movielens_tmdb_mapping.csv"))
+
+# Merge on movieId
+merged_df = pd.merge(
+    mapping_df, 
+    movies_df[['movieId', 'genres']], 
+    on='movieId', 
+    how='left'
+)
+
+# Keep columns you want
+final_mapping_df = merged_df[['movieId', 'title', 'genres', 'imdbId', 'tmdbId', 'cast', 'crew']]
+
+# Save as a new mapping file
+final_mapping_df.to_csv(os.path.join(BASE_DIR, "Data", "movie_full_mapping.csv"), index=False)
+
+print("Merged mapping file created:", final_mapping_df.head())
