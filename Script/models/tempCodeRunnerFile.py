@@ -11,12 +11,11 @@ from surprise.accuracy import rmse, mae
 df_path = os.getenv('DATA_PATH')
 
 if df_path is None:
-    
+    # fallback: relative path from this script
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
-    df_path = os.path.join(BASE_DIR, "Data", "data_for_recommender.csv")
+    df_path = os.path.join(BASE_DIR, "Data", "ratings_preprocessed.csv")
 
 df = pd.read_csv(df_path)
-print("Dataset shape:", df.shape)
 
 # Surprise requires a specific format
 reader = Reader(rating_scale=(df.rating.min(), df.rating.max()))

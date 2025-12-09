@@ -13,10 +13,10 @@ ratings['rating_bin'] = pd.cut(
     labels=['0-1', '1-2', '2-3', '3-4', '4-5']
 )
 
-# Stratified sample of 70,000 rows
+# stratified sample of 100,000 rows
 sampled_ratings, _ = train_test_split(
     ratings,
-    train_size=70000,
+    train_size=100000,
     stratify=ratings['rating_bin'],
     random_state=None
 )
@@ -25,6 +25,6 @@ sampled_ratings, _ = train_test_split(
 sampled_ratings = sampled_ratings.drop(columns=['rating_bin'])
 
 # Save to new CSV
-sampled_ratings.to_csv("new_sample_70k.csv", index=False)
+sampled_ratings.to_csv("sampled_data.csv", index=False)
 
-print("Created ratings_sample_70k.csv with a balanced stratified sample.")
+print("Done")
