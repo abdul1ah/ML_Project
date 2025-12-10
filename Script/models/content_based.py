@@ -36,6 +36,14 @@ mapping_df['cast_names'] = mapping_df['cast'].apply(extract_cast_names)
 # Create a combined feature string for each movie
 mapping_df['features'] = mapping_df['genres'].str.replace('|', ' ') + ' ' + mapping_df['cast_names']
 
+movie_metadata = {}
+for _, row in mapping_df.iterrows():
+    movie_metadata[row['movieId']] = {
+        'title': row.get('title', 'Unknown'),
+        'genres': row['genres'],
+        'cast_names': row['cast_names']
+    }
+
 # TF-IDF vectorization
 tfidf = TfidfVectorizer(stop_words='english')
 tfidf_matrix = tfidf.fit_transform(mapping_df['features'])

@@ -7,7 +7,6 @@ from surprise.accuracy import rmse, mae
 
 # load dataset 
 df_path = os.getenv('DATA_PATH')
-
 if df_path is None:
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
     df_path = os.path.join(BASE_DIR, "Data", "sampled_data.csv")   
@@ -18,7 +17,6 @@ print("Dataset shape:", df.shape)
 # load movies mapping file (title, genres, cast)
 mapping_df = pd.read_csv(os.path.join(BASE_DIR, "Data", "movie_mapping.csv"))
 
-# using a dictionary for easy lookup
 # fill N/A to avoid errors with missing genres or cast
 mapping_df['genres'] = mapping_df['genres'].fillna("N/A")
 mapping_df['cast'] = mapping_df['cast'].fillna("[]")  # empty JSON list if missing
@@ -33,7 +31,15 @@ def extract_cast_names(cast_str, top_n=5):
         return "N/A"
 
 mapping_df['cast_names'] = mapping_df['cast'].apply(extract_cast_names)
+
+# create movie_info dictionary from mapping_df
 movie_info = mapping_df.set_index('movieId')[['title', 'genres', 'cast_names']].to_dict(orient='index')
+
+# ensure all movies in df have an entry in movie_info
+all_movie_ids = df['movieId'].unique()
+for mid in all_movie_ids:
+    if mid not in movie_info:
+        movie_info[mid] = {'title': 'Unknown', 'genres': 'N/A', 'cast_names': 'N/A'}
 
 # restructuring into surprise's required format
 reader = Reader(rating_scale=(df.rating.min(), df.rating.max()))
@@ -48,7 +54,7 @@ param_grid = {
 }
 
 # GridSearchCV with 3-fold cross-validation (simpler, lighter)
-gs = GridSearchCV(SVD, param_grid, measures=['rmse', 'mae'], cv=3)  # removed joblib_verbose
+gs = GridSearchCV(SVD, param_grid, measures=['rmse', 'mae'], cv=3)
 gs.fit(data)
 
 print("\nBest RMSE:", gs.best_score['rmse'])
@@ -97,4 +103,4 @@ def recommend_for_user(user_id, n=5):
 # test recommendations for a sample user
 print("\nTop recommendations for user 1:")
 for title, genres, cast, rating in recommend_for_user(1, 5):
-    print(f"\nTitle: {title}, Genres: {genres}, Predicted Rating: {rating:.2f}")
+    print(f"\nTitle: {title}, Genres: {genres}, Cast: {cast}, Predicted Rating: {rating:.2f}")
