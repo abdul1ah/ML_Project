@@ -2,7 +2,7 @@ import os
 import sys
 import pickle
 
-# adding project root to sys.path
+# adding project root 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 from Script.models.collaborative import best_model, movie_info
