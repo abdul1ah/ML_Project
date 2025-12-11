@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import json
+import pickle
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from surprise import Dataset, Reader
@@ -8,7 +9,9 @@ from surprise.model_selection import train_test_split
 from surprise.accuracy import rmse, mae
 import numpy as np
 
+# -------------------------------
 # Load user ratings
+# -------------------------------
 df_path = os.getenv('DATA_PATH')
 if df_path is None:
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
@@ -17,7 +20,9 @@ if df_path is None:
 ratings_df = pd.read_csv(df_path)
 print("Ratings dataset shape:", ratings_df.shape)
 
+# -------------------------------
 # Load movie mapping
+# -------------------------------
 mapping_df = pd.read_csv(os.path.join(BASE_DIR, "Data", "movie_mapping.csv"))
 mapping_df['genres'] = mapping_df['genres'].fillna("N/A")
 mapping_df['cast'] = mapping_df['cast'].fillna("[]")
@@ -27,15 +32,16 @@ def extract_cast_names(cast_str, top_n=5):
     try:
         cast_list = json.loads(cast_str)
         names = [c['name'] for c in cast_list]
-        return ' '.join(names[:top_n])
+        return ', '.join(names[:top_n])  # changed from space to comma
     except Exception:
         return ""
 
 mapping_df['cast_names'] = mapping_df['cast'].apply(extract_cast_names)
 
-# Create a combined feature string for each movie
+# Create combined feature string
 mapping_df['features'] = mapping_df['genres'].str.replace('|', ' ') + ' ' + mapping_df['cast_names']
 
+# Build movie metadata dictionary
 movie_metadata = {}
 for _, row in mapping_df.iterrows():
     movie_metadata[row['movieId']] = {
@@ -44,7 +50,9 @@ for _, row in mapping_df.iterrows():
         'cast_names': row['cast_names']
     }
 
+# -------------------------------
 # TF-IDF vectorization
+# -------------------------------
 tfidf = TfidfVectorizer(stop_words='english')
 tfidf_matrix = tfidf.fit_transform(mapping_df['features'])
 movie_ids = mapping_df['movieId'].values
@@ -61,7 +69,6 @@ def compute_movie_similarity(tfidf_matrix):
     sim_matrix = cosine_similarity(tfidf_matrix)
     return sim_matrix
 
-# Compute similarity matrix once
 similarity_matrix = compute_movie_similarity(tfidf_matrix)
 
 # -------------------------------
@@ -73,7 +80,6 @@ def predict_rating(user_id, movie_id):
 
     idx = movie_index[movie_id]
 
-    # Movies the user has already rated
     user_ratings = ratings_df[ratings_df['userId'] == user_id]
     if user_ratings.empty:
         return np.nan  # unknown user
@@ -86,7 +92,7 @@ def predict_rating(user_id, movie_id):
         if rated_movie_id not in movie_index:
             continue
         rated_idx = movie_index[rated_movie_id]
-        sim = similarity_matrix[idx, rated_idx]  # use precomputed similarity
+        sim = similarity_matrix[idx, rated_idx]
         weighted_sum += sim * row['rating']
         sim_sum += sim
 
@@ -106,7 +112,7 @@ predictions = []
 for uid, iid, true_r in testset:
     pred_r = predict_rating(uid, iid)
     if np.isnan(pred_r):
-        pred_r = ratings_df['rating'].mean()  # fallback
+        pred_r = ratings_df['rating'].mean()
     predictions.append((true_r, pred_r))
 
 true_ratings, pred_ratings = zip(*predictions)
@@ -114,3 +120,23 @@ rmse_val = np.sqrt(np.mean((np.array(true_ratings) - np.array(pred_ratings))**2)
 mae_val = np.mean(np.abs(np.array(true_ratings) - np.array(pred_ratings)))
 
 print(f"Content-Based Model Evaluation -> RMSE: {rmse_val:.4f}, MAE: {mae_val:.4f}")
+
+# -------------------------------
+# Save all artifacts
+# -------------------------------
+SAVED_MODELS_DIR = os.path.join(BASE_DIR, "Script", "saved_models")
+os.makedirs(SAVED_MODELS_DIR, exist_ok=True)
+
+with open(os.path.join(SAVED_MODELS_DIR, "movie_similarity_matrix.pkl"), "wb") as f:
+    pickle.dump(similarity_matrix, f)
+
+with open(os.path.join(SAVED_MODELS_DIR, "content_movie_index.pkl"), "wb") as f:
+    pickle.dump(movie_index, f)
+
+with open(os.path.join(SAVED_MODELS_DIR, "content_ratings_df.pkl"), "wb") as f:
+    pickle.dump(ratings_df, f)
+
+with open(os.path.join(SAVED_MODELS_DIR, "movie_metadata.pkl"), "wb") as f:
+    pickle.dump(movie_metadata, f)
+
+print("Content-based model artifacts saved successfully in Script/saved_models/")
