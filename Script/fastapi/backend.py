@@ -222,3 +222,37 @@ def search_movies(query: str = Query(..., min_length=1)):
 def admin_stats(username: str = None):
     if username != "admin": raise HTTPException(status_code=403, detail="Unauthorized")
     return {"total_users": len(USERS), "total_movies": len(ALL_MOVIES)}
+
+    # --- ADD THESE MISSING ROUTES ---
+
+@app.get("/trending")
+def get_trending(limit: int = Query(20, le=50)):
+    # Simple trending logic: return a slice of your movies
+    # Or implement a real 'trending' score if you have one
+    if not ALL_MOVIES:
+        raise HTTPException(status_code=503, detail="Data not loaded")
+    
+    # Example: Return the first 'limit' movies from your metadata
+    results = []
+    for mid in ALL_MOVIES[:limit]:
+        results.append(enrich_movie(mid))
+    return results
+
+@app.get("/movie/{movie_id}")
+def get_movie_details(movie_id: int):
+    if movie_id not in movie_metadata:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    
+    return enrich_movie(movie_id)
+
+@app.get("/recommend/genre")
+def recommend_by_genre(genre: str, n: int = 20):
+    results = []
+    for mid, meta in movie_metadata.items():
+        if genre.lower() in meta.get("genres", "").lower():
+            results.append(enrich_movie(mid))
+        if len(results) >= n:
+            break
+    if not results:
+        raise HTTPException(status_code=404, detail="No movies found for this genre")
+    return results
