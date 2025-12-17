@@ -21,13 +21,14 @@ const navbar = document.getElementById("navbar");
 const navLinks = document.getElementById("nav-links");
 const logoutBtn = document.getElementById("logout-btn");
 
-const BACKEND_URL = window.location.origin;
+// Use an empty string for relative paths so it works on both Localhost and Hugging Face
+const BACKEND_URL = ""; 
 let isLoading = false;
 
 /* ---------------- UI Helpers ---------------- */
 
 function resetView() {
-    hero.style.display = "block";
+    if(hero) hero.style.display = "block";
     sectionTitle.textContent = "";
     movieGrid.innerHTML = "";
     movieGrid.classList.remove("movie-details-mode");
@@ -50,10 +51,8 @@ function showError(msg) {
     `;
 }
 
-// Fix 3: History Thumbnail & Data Matching
 function renderMovies(movies, extra = null) {
     movieGrid.innerHTML = movies.map(m => {
-        // Fallbacks for every field to prevent blank cards
         const mid = m.movie_id || m.id;
         const posterUrl = m.poster || m.poster_path || 'https://via.placeholder.com/300x450?text=No+Image';
         const title = m.title || "Unknown Title";
@@ -81,8 +80,9 @@ async function apiGet(path, params = {}) {
     try {
         const res = await axios.get(`${BACKEND_URL}${path}`, { params });
         return res.data;
-    } catch {
-        showError("Something went wrong.");
+    } catch (err) {
+        console.error("API Error:", err);
+        showError("Something went wrong loading data.");
         return null;
     } finally {
         isLoading = false;
@@ -91,7 +91,6 @@ async function apiGet(path, params = {}) {
 
 /* ---------------- Pages ---------------- */
 
-// Fix 2: Automatically show recommendations on Home
 function showHome() {
     resetView();
     const role = sessionStorage.getItem("role");
@@ -101,7 +100,7 @@ function showHome() {
 }
 
 async function loadTrending() {
-    hero.style.display = "none";
+    if(hero) hero.style.display = "none";
     sectionTitle.textContent = "Trending Now";
     movieGrid.classList.remove("movie-details-mode");
 
@@ -110,7 +109,7 @@ async function loadTrending() {
 }
 
 async function loadGenres() {
-    hero.style.display = "none";
+    if(hero) hero.style.display = "none";
     sectionTitle.textContent = "Pick a Genre";
     movieGrid.classList.remove("movie-details-mode");
 
@@ -129,42 +128,35 @@ async function loadGenres() {
 }
 
 async function recommendForUser() {
-    const uid = Number(sessionStorage.getItem("user_id"));
+    const uid = sessionStorage.getItem("user_id");
     if (!uid) return;
 
-    hero.style.display = "none";
+    if(hero) hero.style.display = "none";
     sectionTitle.textContent = "Handpicked For You";
     movieGrid.classList.remove("movie-details-mode");
 
-    const data = await apiGet("/recommend", { user_id: uid, n: 12 });
+    const data = await apiGet("/recommend", { user_id: Number(uid), n: 12 });
     if (data) renderMovies(data, m =>
-        `<p class="score">Taste Match: ${m.predicted_rating.toFixed(2)}</p>`
+        `<p class="score">Taste Match: ${m.predicted_rating ? m.predicted_rating.toFixed(2) : 'N/A'}</p>`
     );
 }
 
 async function loadHistory() {
-    // IMPORTANT: Pulling from session storage because of your new login system
     const uid = sessionStorage.getItem("user_id");
     if (!uid) return;
 
-    hero.style.display = "none";
-    if (typeof controlSection !== 'undefined') controlSection.style.display = "none";
-    
+    if(hero) hero.style.display = "none";
     sectionTitle.textContent = "Your Watch History";
     movieGrid.classList.remove("movie-details-mode");
 
     const data = await apiGet("/user/history", { user_id: Number(uid) });
-    
-    if (!data?.length) {
-        return showError("No history found.");
-    }
-    
+    if (!data?.length) return showError("No history found.");
     renderMovies(data, m => `<p class="score">Your Rating: ${m.rating}</p>`);
 }
 
 async function searchMovies(q) {
     if (!q) return;
-    hero.style.display = "none";
+    if(hero) hero.style.display = "none";
     sectionTitle.textContent = `Search: "${q}"`;
     movieGrid.classList.remove("movie-details-mode");
 
@@ -184,7 +176,7 @@ movieGrid.addEventListener("click", e => {
 });
 
 async function loadMovieDetails(movieId) {
-    hero.style.display = "none";
+    if(hero) hero.style.display = "none";
     sectionTitle.textContent = "";
     movieGrid.classList.add("movie-details-mode");
 
@@ -202,8 +194,8 @@ async function loadMovieDetails(movieId) {
                     <h2>${movie.title}</h2>
                     <p><strong>Release:</strong> ${movie.release_date || "Unknown"}</p>
                     <p><strong>Rating:</strong> ⭐ ${movie.rating_tmdb ?? "N/A"}</p>
-                    <p><strong>Genres:</strong> ${movie.genres}</p>
-                    <p><strong>Cast:</strong> ${movie.cast}</p>
+                    <p><strong>Genres:</strong> ${movie.genres || "N/A"}</p>
+                    <p><strong>Cast:</strong> ${movie.cast || "N/A"}</p>
                     <p><strong>Overview:</strong> ${movie.overview || "N/A"}</p>
                 </div>
             </div>
@@ -246,26 +238,20 @@ function logout() {
     sessionStorage.clear();
     window.location.reload();
 }
-logoutBtn.onclick = logout;
+if(logoutBtn) logoutBtn.onclick = logout;
 
-// Fix 1: Utility to handle Navbar hiding without breaking Logout
 function configureNavbarForRole(role) {
+    if(!navbar) return;
     navbar.style.display = "flex";
-    logoutBtn.style.display = "block"; // Always visible
+    if(logoutBtn) logoutBtn.style.display = "block";
 
-    if (role === "admin") {
-        homeBtn.style.display = "none";
-        trendingBtn.style.display = "none";
-        genreBtn.style.display = "none";
-        historyBtn.style.display = "none";
-        navSearchInput.parentElement.style.display = "none"; // Hide search wrapper
-    } else {
-        homeBtn.style.display = "flex";
-        trendingBtn.style.display = "flex";
-        genreBtn.style.display = "flex";
-        historyBtn.style.display = "flex";
-        navSearchInput.parentElement.style.display = "flex";
-    }
+    const displayStyle = (role === "admin") ? "none" : "flex";
+    
+    if(homeBtn) homeBtn.style.display = displayStyle;
+    if(trendingBtn) trendingBtn.style.display = displayStyle;
+    if(genreBtn) genreBtn.style.display = displayStyle;
+    if(historyBtn) historyBtn.style.display = displayStyle;
+    if(navSearchInput) navSearchInput.parentElement.style.display = displayStyle;
 }
 
 loginBtn?.addEventListener("click", async () => {
@@ -279,24 +265,23 @@ loginBtn?.addEventListener("click", async () => {
 
     try {
         const res = await axios.post(`${BACKEND_URL}/login`, { username: usernameInputVal, password });
-        if (res.status === 200) {
-            const { role, user_id, username } = res.data;
-            sessionStorage.setItem("user_id", user_id);
-            sessionStorage.setItem("role", role);
-            sessionStorage.setItem("username", username); 
+        const { role, user_id, username } = res.data;
+        
+        sessionStorage.setItem("user_id", user_id);
+        sessionStorage.setItem("role", role);
+        sessionStorage.setItem("username", username); 
 
-            loginPage.style.display = "none"; 
-            configureNavbarForRole(role);
+        loginPage.style.display = "none"; 
+        configureNavbarForRole(role);
 
-            if (role === "admin") {
-                mainContent.style.display = "none";
-                adminContainer.style.display = "block";
-                loadAdminMetrics(); 
-            } else {
-                adminContainer.style.display = "none";
-                mainContent.style.display = "block";
-                showHome();
-            }
+        if (role === "admin") {
+            mainContent.style.display = "none";
+            adminContainer.style.display = "block";
+            loadAdminMetrics(); 
+        } else {
+            adminContainer.style.display = "none";
+            mainContent.style.display = "block";
+            showHome();
         }
     } catch (err) {
         loginError.textContent = "Invalid username or password.";
@@ -307,10 +292,11 @@ window.addEventListener("DOMContentLoaded", () => {
     const role = sessionStorage.getItem("role");
     const userId = sessionStorage.getItem("user_id");
 
-    loginPage.style.display = "none";
-    mainContent.style.display = "none";
-    adminContainer.style.display = "none";
-    navbar.style.display = "none";
+    // Initial state
+    if(loginPage) loginPage.style.display = "none";
+    if(mainContent) mainContent.style.display = "none";
+    if(adminContainer) adminContainer.style.display = "none";
+    if(navbar) navbar.style.display = "none";
 
     if (role === "admin") {
         configureNavbarForRole("admin");
@@ -321,7 +307,7 @@ window.addEventListener("DOMContentLoaded", () => {
         mainContent.style.display = "block";
         showHome();
     } else {
-        loginPage.style.display = "block";
+        if(loginPage) loginPage.style.display = "block";
         sessionStorage.clear(); 
     }
 });
@@ -357,11 +343,13 @@ async function loadAdminMetrics() {
 
 /* ---------------- Events ---------------- */
 
-homeBtn.onclick = showHome;
-trendingBtn.onclick = loadTrending;
-genreBtn.onclick = loadGenres;
-historyBtn.onclick = loadHistory;
+if(homeBtn) homeBtn.onclick = showHome;
+if(trendingBtn) trendingBtn.onclick = loadTrending;
+if(genreBtn) genreBtn.onclick = loadGenres;
+if(historyBtn) historyBtn.onclick = loadHistory;
 
-navSearchInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") searchMovies(navSearchInput.value);
-});
+if(navSearchInput) {
+    navSearchInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") searchMovies(navSearchInput.value);
+    });
+}

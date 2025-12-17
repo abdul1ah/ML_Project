@@ -37,6 +37,7 @@ body {
 .bg-noise {
     position: fixed;
     inset: 0;
+    /* Using an external absolute URL for the noise texture to ensure it loads */
     background-image: url("https://grainy-gradients.vercel.app/noise.svg");
     opacity: 0.07;
     z-index: -1;
@@ -80,7 +81,7 @@ body {
     border: 1px solid var(--accent-soft);
 }
 
-/* Logout Button - Unified with nav-btn structure */
+/* Logout Button */
 #logout-btn {
     padding: 0.6rem 1.2rem;
     border-radius: 999px;
@@ -229,7 +230,6 @@ body {
     color: var(--accent);
 }
 
-
 /* Section Title Alignment */
 #section-title {
     max-width: 1000px;
@@ -240,15 +240,13 @@ body {
     padding-top: 3rem; 
 }
 
-/* Centering Movie Grid when showing Details */
+/* Movie details */
 .movie-details-mode {
     display: block; 
     max-width: 1100px; 
     margin: 0 auto;
     padding: 0 2rem;
 }
-
-/* Movie details */
 
 .movie-details-container {
     display: grid;
@@ -257,29 +255,24 @@ body {
     width: 100%;
 }
 
-
 .movie-details-card {
     display: grid;
     grid-template-columns: 260px 1fr;
     gap: 2.5rem;
-
     max-width: 1100px;
     margin: 0 auto;       
     padding: 2.5rem;
-
     background: var(--card);
     border-radius: 20px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
 }
 
-/* Poster */
 .movie-details-poster {
     width: 100%;
     border-radius: 14px;
     object-fit: cover;
 }
 
-/* Info */
 .movie-details-info {
     display: grid;
     gap: 0.7rem;
@@ -297,17 +290,16 @@ body {
 }
 
 /* Back button */
-/* Back button - Updated to match info container width */
 #back-btn {
-    width: 100%; /* Changed from fit-content to fill the container */
-    max-width: 1100px; /* Ensures it doesn't exceed the main card width */
+    width: 100%; 
+    max-width: 1100px; 
     margin: 0 auto;
     background: var(--accent);
     color: #020617;
-    padding: 0.9rem 1.2rem; /* Increased vertical padding for a better look at full width */
+    padding: 0.9rem 1.2rem;
     border-radius: 12px;
     border: none;
-    font-weight: 600; /* Added weight to make it look like a primary action */
+    font-weight: 600;
     cursor: pointer;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -317,17 +309,16 @@ body {
     box-shadow: 0 10px 30px rgba(56, 189, 248, 0.4);
 }
 
+/* Similar Movies */
 .similar-section {
-    width: 100vw;                      
-    margin-left: calc(-50vw + 50%);    
-    padding: 2rem 4rem;
+    width: 100%;                                     
+    padding: 2rem 0;
 }
 
 .similar-title {
     font-size: 1.6rem;
     margin-bottom: 1rem;
 }
-
 
 .similar-carousel-wrapper {
     display: grid;
@@ -336,13 +327,11 @@ body {
     gap: 1rem;
 }
 
-
 .similar-movies-carousel {
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: 200px;   
     gap: 1.2rem;
-
     overflow-x: auto;
     scroll-behavior: smooth;
     padding: 1rem 0;
@@ -351,7 +340,6 @@ body {
 .similar-movies-carousel::-webkit-scrollbar {
     display: none;
 }
-
 
 .similar-movie-card img {
     width: 100%;
@@ -369,7 +357,6 @@ body {
     text-overflow: ellipsis;
 }
 
-/* Arrows */
 .carousel-btn {
     background: rgba(0,0,0,0.7);
     border: none;
@@ -388,17 +375,12 @@ body {
     padding: 2rem;
 }
 
-
-/* Admin Page - Naming Alignment */
+/* Admin Page */
 .admin-dashboard-layout {
     max-width: 1200px;
     margin: 2rem auto;
     padding: 0 2rem;
     color: var(--text);
-}
-
-#admin-container {
-    padding: 1rem 0;
 }
 
 .admin-cards {
@@ -408,8 +390,7 @@ body {
     margin-bottom: 3rem;
 }
 
-/* Stat Cards */
-.admin-card, .admin-cards > div {
+.admin-card {
     background: var(--card);
     backdrop-filter: blur(18px);
     padding: 2rem;
@@ -419,7 +400,7 @@ body {
     transition: transform 0.2s ease;
 }
 
-.admin-card:hover, .admin-cards > div:hover {
+.admin-card:hover {
     transform: translateY(-6px);
 }
 
@@ -428,19 +409,13 @@ body {
     font-size: 1.3rem;
 }
 
-.admin-card p, .admin-cards p {
+.admin-card p {
     font-size: 2rem;
     font-weight: 600;
     color: var(--accent);
 }
 
-.admin-cards span {
-    font-size: 1rem;
-    color: var(--muted);
-}
-
-/* Admin Table - Glassmorphism Consistency */
-#user-table, .admin-container table {
+#user-table {
     width: 100%;
     border-collapse: collapse;
     background: var(--card);
@@ -450,31 +425,23 @@ body {
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
 }
 
-#user-table th, #user-table td, .admin-container th, .admin-container td {
+#user-table th, #user-table td {
     padding: 0.8rem 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     text-align: left;
 }
 
-#user-table th, .admin-container th {
+#user-table th {
     color: var(--accent);
     font-weight: 600;
 }
 
-#user-table td, .admin-container td {
-    color: var(--text);
-}
-
-#user-table tbody tr:hover, .admin-container tbody tr:hover {
+#user-table tbody tr:hover {
     background: rgba(56, 189, 248, 0.1);
 }
 
-/* Scrollable table for smaller screens */
-.admin-dashboard-layout, .admin-container {
-    overflow-x: auto;
-}
-
 .login-error {
-    color: #f87171; /* Tailwind red-400 */
+    color: #f87171;
     font-size: 0.9rem;
+    margin-top: 0.5rem;
 }
