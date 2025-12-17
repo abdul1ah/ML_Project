@@ -224,26 +224,32 @@ def search_movies(query: str = Query(..., min_length=1)):
     return results[:20]
 
 @app.get("/admin/stats")
-def admin_stats(username: str = None):
-    if username != "admin": raise HTTPException(status_code=403, detail="Unauthorized")
+def admin_stats(username: str = Query(None)):
+    if username != "admin": 
+        raise HTTPException(status_code=403, detail="Unauthorized")
     
-    # Calculate detailed metrics for the dashboard tables
+    # Defensive check: If LFS failed or files didn't load, return 0s instead of crashing
+    total_users = int(sampled_df["userId"].nunique()) if "userId" in sampled_df.columns else 0
+    total_movies = int(movies_df["movieId"].nunique()) if "movieId" in movies_df.columns else 0
+    total_ratings = int(len(ratings_df)) if 'ratings_df' in globals() else 0
+    
     user_metrics = []
-    unique_user_ids = sampled_df['userId'].unique()[:10] # Top 10 for dashboard
-    for uid in unique_user_ids:
-        u_ratings = sampled_df[sampled_df['userId'] == uid]
-        user_metrics.append({
-            "user_id": int(uid),
-            "ratings_count": int(len(u_ratings)),
-            "avg_rating": round(float(u_ratings['rating'].mean()), 2),
-            "last_activity": "Recent"
-        })
+    if "userId" in sampled_df.columns:
+        unique_user_ids = sampled_df['userId'].unique()[:10]
+        for uid in unique_user_ids:
+            u_ratings = sampled_df[sampled_df['userId'] == uid]
+            user_metrics.append({
+                "user_id": int(uid),
+                "ratings_count": int(len(u_ratings)),
+                "avg_rating": round(float(u_ratings['rating'].mean()), 2),
+                "last_activity": "Recent"
+            })
 
     return {
-        "total_users": int(sampled_df["userId"].nunique()),
-        "total_movies": int(movies_df["movieId"].nunique()),
-        "total_ratings": int(len(ratings_df)),
-        "recent_ratings": int(len(sampled_df.tail(10))),
+        "total_users": total_users,
+        "total_movies": total_movies,
+        "total_ratings": total_ratings,
+        "recent_ratings": int(len(sampled_df.tail(10))) if 'sampled_df' in globals() else 0,
         "user_metrics": user_metrics
     }
 
