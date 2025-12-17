@@ -71,13 +71,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # CHANGED: We need more than 1 commit history to avoid "shallow update not allowed"
-          # fetch-depth: 0 pulls all history, which is required for pushing to a different remote.
-          fetch-depth: 0 
+          fetch-depth: 0
           lfs: false 
 
       - name: Kill LFS Hooks
         run: git lfs uninstall
+
+      - name: Remove large files from sync
+        run: |
+          # This removes the large files from the temporary git index 
+          # so they aren't included in the push to Hugging Face
+          git rm -r --cached Data/ || echo "Data not in index"
+          git commit -m "Remove large files for HF sync" || echo "No changes to commit"
 
       - name: Push to Hugging Face
         env:
@@ -85,6 +90,5 @@ jobs:
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
-          # ADDED: --force is used here to ensure the local history overwrites the remote space
-          # This helps clear out the "Unexpected internal error hook" if HF is in a bad state.
+          # We use --force to ensure we overwrite the remote with our "cleaned" version
           git push --force https://Abdullah-32:$HF_TOKEN@huggingface.co/spaces/Abdullah-32/Cinephile_Hub main
