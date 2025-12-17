@@ -11,7 +11,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          lfs: false  # Do NOT pull the heavy 800MB files
+          lfs: true # We need LFS for the CSV
+
+      # This ensures we don't pull the heavy .pkl files, only the CSV
+      - name: Selective LFS Pull
+        run: |
+          git lfs pull --exclude="*.pkl" --include="Data/sampled_data.csv"
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -47,7 +52,6 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          # The Docker build handles its own training internally
           docker build -t abdullah2223312/movie-recommendation .
           docker push abdullah2223312/movie-recommendation
 
