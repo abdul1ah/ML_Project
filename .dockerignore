@@ -9,6 +9,7 @@ artifacts/
 # We block all CSVs first, then "unblock" the specific one needed for training
 Data/*
 !Data/sampled_data.csv
+!Data/movie_mapping.csv
 
 # 3. Block Git and GitHub (Major source of hidden bulk)
 .git
