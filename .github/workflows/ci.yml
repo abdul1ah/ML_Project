@@ -24,6 +24,13 @@ jobs:
           pip install -r requirements.txt
           pip install pytest httpx prefect
 
+      - name: Generate Mock Models for Testing
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: python workflow/train_pipeline.py
+
       - name: Run Pytest
         env:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
@@ -40,7 +47,7 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          # The Docker build now handles its own training internally
+          # The Docker build handles its own training internally
           docker build -t abdullah2223312/movie-recommendation .
           docker push abdullah2223312/movie-recommendation
 
@@ -63,6 +70,7 @@ jobs:
         with:
           fetch-depth: 0
           lfs: false 
+
       - name: Push to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
