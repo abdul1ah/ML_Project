@@ -11,12 +11,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          lfs: true # We need LFS for the CSV
+          lfs: false           # Disable LFS download
+          fetch-depth: 1       # Only pull the latest commit (ignores heavy history)
 
-      # This ensures we don't pull the heavy .pkl files, only the CSV
-      - name: Selective LFS Pull
-        run: |
-          git lfs pull --exclude="*.pkl" --include="Data/sampled_data.csv"
+      - name: Kill LFS Hooks
+        # This prevents the runner from even trying to talk to the LFS server
+        run: git lfs uninstall
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -29,7 +29,7 @@ jobs:
           pip install -r requirements.txt
           pip install pytest httpx prefect
 
-      - name: Generate Mock Models for Testing
+      - name: Generate Models for Testing
         env:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
           GITHUB_WORKSPACE: ${{ github.workspace }}
@@ -72,8 +72,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           lfs: false 
+
+      - name: Kill LFS Hooks
+        run: git lfs uninstall
 
       - name: Push to Hugging Face
         env:
