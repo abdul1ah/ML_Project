@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # The name of our recommendation service
+  cinephile-app:
+    image: abdullah2223312/movie-recommendation:latest
+    container_name: cinephile_backend
+    # Maps your PC's port 8000 to the FastAPI port 8000
+    ports:
+      - "8000:8000"
+    # Tells Docker to look for your existing key.env file
+    env_file:
+      - key.env
+    environment:
+      # Ensures the backend.py path logic uses /app as the root
+      - GITHUB_WORKSPACE=/app
+    volumes:
+      # Links your local folders to the container so data stays synced
+      - ./Data:/app/Data
+      - ./Script/saved_models:/app/Script/saved_models
+    # Automatically restarts if the app crashes or your PC reboots
+    restart: always
+
+networks:
+  default:
+    name: cinephile_network

@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pandas<2.2.0
+numpy<2.0.0
+scikit-surprise==1.1.4
+scikit-learn
+requests
+python-multipart
+pydantic
+pytest
+httpx

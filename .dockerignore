@@ -1,0 +1,13 @@
+# Ignore local python environment
+venv/
+__pycache__/
+*.pyc
+
+# Ignore data/logs that aren't needed for the app to run
+*.ipynb
+*.log
+.git
+.github
+
+# Ignore OS specific files
+.DS_Store

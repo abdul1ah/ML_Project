@@ -1,0 +1,17 @@
+import os
+import pickle
+import requests
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import numpy as np
+from contextlib import asynccontextmanager
+from pydantic import BaseModel
+import pandas as pd
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+ratings_df = pd.read_csv(os.path.join(BASE_DIR, "Data", "ratings.csv"))
+movies_df = pd.read_csv(os.path.join(BASE_DIR, "Data", "movies.csv"))
+sampled_df = pd.read_csv(os.path.join(BASE_DIR, "Data", "sampled_data.csv"))
+
+print(sampled_df.shape)

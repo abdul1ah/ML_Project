@@ -1,0 +1,12 @@
+
+# API Keys and Secrets
+key.env
+.env
+
+# Local environment variables
+.env.local
+.env.*.local
+
+Script/saved_models/
+*.pkl
+*.bin

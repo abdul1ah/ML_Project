@@ -1,0 +1,480 @@
+:root {
+    --bg: #020617;
+    --card: rgba(15, 23, 42, 0.75);
+    --accent: #38bdf8;
+    --accent-soft: rgba(56, 189, 248, 0.15);
+    --text: #e5e7eb;
+    --muted: #94a3b8;
+    --danger: #f87171;
+    --danger-soft: rgba(248, 113, 113, 0.15);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", sans-serif;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Background layers */
+.bg-gradient {
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(circle at 20% 20%, #0ea5e933, transparent 40%),
+        radial-gradient(circle at 80% 30%, #22d3ee22, transparent 40%),
+        radial-gradient(circle at 50% 80%, #6366f122, transparent 40%);
+    z-index: -2;
+}
+
+.bg-noise {
+    position: fixed;
+    inset: 0;
+    background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+    opacity: 0.07;
+    z-index: -1;
+}
+
+/* Navbar */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.4rem 3rem;
+}
+
+.logo {
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+.nav-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.nav-btn {
+    padding: 0.6rem 1.2rem;
+    border-radius: 999px;
+    border: none;
+    background: var(--accent-soft);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+    background: var(--accent);
+    color: #020617;
+}
+
+.nav-btn.ghost {
+    background: transparent;
+    border: 1px solid var(--accent-soft);
+}
+
+/* Logout Button - Unified with nav-btn structure */
+#logout-btn {
+    padding: 0.6rem 1.2rem;
+    border-radius: 999px;
+    border: 1px solid rgba(248, 113, 113, 0.2);
+    background: var(--danger-soft);
+    color: var(--danger);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#logout-btn:hover {
+    background: var(--danger);
+    color: #020617;
+    box-shadow: 0 0 20px rgba(248, 113, 113, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Hero section */
+.hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.hero h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.hero p {
+    max-width: 700px;
+    font-size: 1.15rem;
+    color: var(--muted);
+}
+
+/* Control section */
+.control-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 2rem;
+}
+
+.control-card {
+    background: var(--card);
+    backdrop-filter: blur(18px);
+    padding: 2.5rem;
+    border-radius: 24px;
+    width: 380px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Input boxes */
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(2, 6, 23, 0.6);
+    border-radius: 14px;
+    padding: 0.8rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+}
+
+.input-wrapper:hover {
+    border-color: var(--accent);
+}
+
+.input-wrapper i {
+    margin-right: 0.6rem;
+    color: var(--muted);
+}
+
+.input-wrapper input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    width: 100%;
+    font-size: 1rem;
+}
+
+/* Primary button */
+.primary-btn {
+    width: 100%;
+    padding: 0.9rem;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(135deg, #38bdf8, #22d3ee);
+    color: #020617;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(56, 189, 248, 0.4);
+}
+
+/* Movie grid */
+.movie-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.5rem;
+}
+
+.movie-card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 1.2rem;
+    text-align: center;
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+.movie-card:hover {
+    transform: translateY(-6px);
+}
+
+.movie-card img {
+    width: 100%;
+    border-radius: 12px;
+    margin-bottom: 0.8rem;
+}
+
+.movie-card h3 {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+}
+
+.movie-card .meta {
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.movie-card .score {
+    margin-top: 0.4rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+
+/* Section Title Alignment */
+#section-title {
+    max-width: 1000px;
+    margin: 0 auto;    
+    padding: 0 2rem; 
+    text-align: center; 
+    font-size: 2rem;
+    padding-top: 3rem; 
+}
+
+/* Centering Movie Grid when showing Details */
+.movie-details-mode {
+    display: block; 
+    max-width: 1100px; 
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+/* Movie details */
+
+.movie-details-container {
+    display: grid;
+    grid-template-rows: auto auto auto;
+    gap: 3rem;
+    width: 100%;
+}
+
+
+.movie-details-card {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 2.5rem;
+
+    max-width: 1100px;
+    margin: 0 auto;       
+    padding: 2.5rem;
+
+    background: var(--card);
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+/* Poster */
+.movie-details-poster {
+    width: 100%;
+    border-radius: 14px;
+    object-fit: cover;
+}
+
+/* Info */
+.movie-details-info {
+    display: grid;
+    gap: 0.7rem;
+    align-content: center;   
+}
+
+.movie-details-info h2 {
+    font-size: 2.1rem;
+    margin-bottom: 0.6rem;
+}
+
+.movie-details-info p {
+    line-height: 1.6;
+    font-size: 1rem;
+}
+
+/* Back button */
+/* Back button - Updated to match info container width */
+#back-btn {
+    width: 100%; /* Changed from fit-content to fill the container */
+    max-width: 1100px; /* Ensures it doesn't exceed the main card width */
+    margin: 0 auto;
+    background: var(--accent);
+    color: #020617;
+    padding: 0.9rem 1.2rem; /* Increased vertical padding for a better look at full width */
+    border-radius: 12px;
+    border: none;
+    font-weight: 600; /* Added weight to make it look like a primary action */
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+#back-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(56, 189, 248, 0.4);
+}
+
+.similar-section {
+    width: 100vw;                      
+    margin-left: calc(-50vw + 50%);    
+    padding: 2rem 4rem;
+}
+
+.similar-title {
+    font-size: 1.6rem;
+    margin-bottom: 1rem;
+}
+
+
+.similar-carousel-wrapper {
+    display: grid;
+    grid-template-columns: 50px 1fr 50px;
+    align-items: center;
+    gap: 1rem;
+}
+
+
+.similar-movies-carousel {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 200px;   
+    gap: 1.2rem;
+
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 1rem 0;
+}
+
+.similar-movies-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+
+.similar-movie-card img {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 14px;
+}
+
+.similar-movie-card p {
+    font-size: 0.9rem;
+    text-align: center;
+    margin-top: 0.4rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Arrows */
+.carousel-btn {
+    background: rgba(0,0,0,0.7);
+    border: none;
+    color: white;
+    font-size: 1.6rem;
+    padding: 0.6rem;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* Login Page */
+.login-container {
+    display: grid;
+    place-items: center;
+    height: 100vh;
+    padding: 2rem;
+}
+
+
+/* Admin Page - Naming Alignment */
+.admin-dashboard-layout {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 2rem;
+    color: var(--text);
+}
+
+#admin-container {
+    padding: 1rem 0;
+}
+
+.admin-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+/* Stat Cards */
+.admin-card, .admin-cards > div {
+    background: var(--card);
+    backdrop-filter: blur(18px);
+    padding: 2rem;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s ease;
+}
+
+.admin-card:hover, .admin-cards > div:hover {
+    transform: translateY(-6px);
+}
+
+.admin-card h3 {
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.admin-card p, .admin-cards p {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.admin-cards span {
+    font-size: 1rem;
+    color: var(--muted);
+}
+
+/* Admin Table - Glassmorphism Consistency */
+#user-table, .admin-container table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    backdrop-filter: blur(18px);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+#user-table th, #user-table td, .admin-container th, .admin-container td {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: left;
+}
+
+#user-table th, .admin-container th {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+#user-table td, .admin-container td {
+    color: var(--text);
+}
+
+#user-table tbody tr:hover, .admin-container tbody tr:hover {
+    background: rgba(56, 189, 248, 0.1);
+}
+
+/* Scrollable table for smaller screens */
+.admin-dashboard-layout, .admin-container {
+    overflow-x: auto;
+}
+
+.login-error {
+    color: #f87171; /* Tailwind red-400 */
+    font-size: 0.9rem;
+}

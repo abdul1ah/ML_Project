@@ -1,0 +1,79 @@
+name: Cinephile CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test-train-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          lfs: true 
+
+      - name: Initialize Git LFS
+        run: git lfs pull
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: |
+          pip install "numpy<2.0.0"
+          pip install -r requirements.txt
+          pip install pytest httpx prefect
+
+      - name: Run Prefect Training Workflow
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: python workflow/train_pipeline.py
+
+      - name: Run Pytest
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          DATA_PATH: ${{ github.workspace }}/Data/sampled_data.csv 
+          PYTHONPATH: ${{ github.workspace }}
+        run: pytest -s tests/
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t abdullah2223312/movie-recommendation .
+          docker push abdullah2223312/movie-recommendation
+
+      - name: Notify Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ job.status }}
+          content: "Cinephile Update: CI/CD Pipeline finished."
+          title: "CI/CD Pipeline Result"
+          description: "Build Result: ${{ job.status }}\nCheck Docker Hub for image `abdullah2223312/movie-recommendation`"
+          color: ${{ job.status == 'success' && '0x00ff00' || '0xff0000' }}
+
+  sync-to-hub:
+    needs: test-train-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+      - name: Push to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        # Updated with your actual username and space name
+        run: git push --force https://Abdullah-32:$HF_TOKEN@huggingface.co/spaces/Abdullah-32/Cinephile_Hub main
