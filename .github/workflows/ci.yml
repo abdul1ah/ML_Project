@@ -72,31 +72,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          lfs: false 
 
-      - name: Kill LFS Hooks
-        run: git lfs uninstall
-
-      - name: Remove large files from sync
-        run: |
-          # This removes the large files from the temporary git index 
-          # so they aren't included in the push to Hugging Face
-          git rm -r --cached Data/ || echo "Data not in index"
-          git commit -m "Remove large files for HF sync" || echo "No changes to commit"
-
-      - name: Push to Hugging Face
+      - name: Push ONLY README to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
           
-          # 1. Remove the Data folder from the current "push" index
-          # This makes Git "forget" the large files for this specific push
-          git rm -rf --cached Data/ || echo "Data not in index"
+          # 1. Create a temporary branch to hold ONLY the README
+          git checkout --orphan hf-space
+          git rm -rf .
+          git checkout main README.md .hfignore Dockerfile  # Keep only the config files
           
-          # 2. Commit this "lightweight" state locally
-          git commit -m "Internal: Remove heavy data for HF sync" || echo "Nothing to commit"
+          # 2. Commit this tiny package
+          git commit -m "Sync config to Hugging Face"
           
-          # 3. Force push this cleaned version
-          git push --force https://Abdullah-32:$HF_TOKEN@huggingface.co/spaces/Abdullah-32/Cinephile_Hub main
+          # 3. Force push this to the main branch of the HF Space
+          git push --force https://Abdullah-32:$HF_TOKEN@huggingface.co/spaces/Abdullah-32/Cinephile_Hub hf-space:main
