@@ -43,8 +43,13 @@ ALL_MOVIES = []
 try:
     csv_path = os.path.join(DATA_DIR, "sampled_data.csv")
     sampled_df = pd.read_csv(csv_path)
+    # Ensure ratings.csv and movies.csv are available for Admin Stats
+    ratings_path = os.path.join(DATA_DIR, "ratings.csv")
+    movies_path = os.path.join(DATA_DIR, "movies.csv")
+    ratings_df = pd.read_csv(ratings_path)
+    movies_df = pd.read_csv(movies_path)
 except Exception as e:
-    print(f"CRITICAL: Could not load CSV data at {csv_path}: {e}")
+    print(f"CRITICAL: Could not load CSV data: {e}")
 
 USERS = {
     "abdullah": {"user_id": 1, "password": "1234", "role": "user"},
@@ -221,9 +226,26 @@ def search_movies(query: str = Query(..., min_length=1)):
 @app.get("/admin/stats")
 def admin_stats(username: str = None):
     if username != "admin": raise HTTPException(status_code=403, detail="Unauthorized")
-    return {"total_users": len(USERS), "total_movies": len(ALL_MOVIES)}
+    
+    # Calculate detailed metrics for the dashboard tables
+    user_metrics = []
+    unique_user_ids = sampled_df['userId'].unique()[:10] # Top 10 for dashboard
+    for uid in unique_user_ids:
+        u_ratings = sampled_df[sampled_df['userId'] == uid]
+        user_metrics.append({
+            "user_id": int(uid),
+            "ratings_count": int(len(u_ratings)),
+            "avg_rating": round(float(u_ratings['rating'].mean()), 2),
+            "last_activity": "Recent"
+        })
 
-    # --- ADD THESE MISSING ROUTES ---
+    return {
+        "total_users": int(sampled_df["userId"].nunique()),
+        "total_movies": int(movies_df["movieId"].nunique()),
+        "total_ratings": int(len(ratings_df)),
+        "recent_ratings": int(len(sampled_df.tail(10))),
+        "user_metrics": user_metrics
+    }
 
 @app.get("/trending")
 def get_trending(limit: int = Query(20, le=50)):
@@ -255,4 +277,25 @@ def recommend_by_genre(genre: str, n: int = 20):
             break
     if not results:
         raise HTTPException(status_code=404, detail="No movies found for this genre")
+    return results
+
+@app.get("/similar")
+def similar_movies(movie_id: int, n: int = 10):
+    if movie_id not in movie_index_map:
+        raise HTTPException(404, "movie not found")
+
+    idx = movie_index_map[movie_id]
+    sims = similarity_matrix[idx]
+    pairs = list(enumerate(sims))
+    pairs.sort(key=lambda x: x[1], reverse=True)
+
+    results = []
+    movie_ids = list(movie_index_map.keys())
+
+    for i, sim in pairs[1:n+1]:
+        mid = movie_ids[i]
+        data = enrich_movie(mid)
+        data["similarity"] = round(float(sim), 3)
+        results.append(data)
+
     return results
