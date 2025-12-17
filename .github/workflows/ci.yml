@@ -11,11 +11,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          lfs: false           # Disable LFS download
-          fetch-depth: 1       # Only pull the latest commit (ignores heavy history)
+          lfs: false           
+          fetch-depth: 1       
 
       - name: Kill LFS Hooks
-        # This prevents the runner from even trying to talk to the LFS server
         run: git lfs uninstall
 
       - name: Set up Python
@@ -72,7 +71,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          # CHANGED: We need more than 1 commit history to avoid "shallow update not allowed"
+          # fetch-depth: 0 pulls all history, which is required for pushing to a different remote.
+          fetch-depth: 0 
           lfs: false 
 
       - name: Kill LFS Hooks
@@ -84,4 +85,6 @@ jobs:
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
+          # ADDED: --force is used here to ensure the local history overwrites the remote space
+          # This helps clear out the "Unexpected internal error hook" if HF is in a bad state.
           git push --force https://Abdullah-32:$HF_TOKEN@huggingface.co/spaces/Abdullah-32/Cinephile_Hub main
