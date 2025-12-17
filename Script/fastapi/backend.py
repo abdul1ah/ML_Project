@@ -6,90 +6,81 @@ import numpy as np
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 
-# =========================
-# SMART PATH LOGIC (SAME AS ORIGINAL)
-# =========================
+# --- SMART PATH LOGIC ---
+# Get the absolute path of the directory where backend.py is located (Script/fastapi)
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+# Move up one level to the 'Script' folder
 SCRIPT_DIR = os.path.dirname(CURRENT_DIR)
+# Move up again to get the Project Root
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 
+# Define specific folder paths
 DATA_DIR = os.path.join(PROJECT_ROOT, "Data")
 MODEL_DIR = os.path.join(SCRIPT_DIR, "saved_models")
-FRONTEND_DIR = os.path.join(SCRIPT_DIR, "frontend")
+FRONTEND_DIR = os.path.join(SCRIPT_DIR, "frontend") # Path to Script/frontend
 
-# =========================
-# GLOBALS
-# =========================
+# Diagnostics printed to Hugging Face logs
+print(f"--- STARTUP DIAGNOSTICS ---")
+print(f"PROJECT_ROOT: {PROJECT_ROOT}")
+print(f"FRONTEND_DIR: {FRONTEND_DIR}")
+print(f"FRONTEND_EXISTS: {os.path.exists(FRONTEND_DIR)}")
+if os.path.exists(FRONTEND_DIR):
+    print(f"FRONTEND_CONTENTS: {os.listdir(FRONTEND_DIR)}")
+print(f"---------------------------")
+
+# Initialize globals
 similarity_matrix = None
 movie_index_map = None
 movie_metadata = {}
 collaborative_model = None
 ALL_MOVIES = []
 
-# =========================
-# LOAD DATA
-# =========================
-ratings_df = pd.read_csv(os.path.join(DATA_DIR, "ratings.csv"))
-movies_df = pd.read_csv(os.path.join(DATA_DIR, "movies.csv"))
-sampled_df = pd.read_csv(os.path.join(DATA_DIR, "sampled_data.csv"))
+# Load dataframes once at startup
+try:
+    csv_path = os.path.join(DATA_DIR, "sampled_data.csv")
+    sampled_df = pd.read_csv(csv_path)
+except Exception as e:
+    print(f"CRITICAL: Could not load CSV data at {csv_path}: {e}")
 
-if "timestamp" in sampled_df.columns:
-    sampled_df["timestamp"] = pd.to_datetime(sampled_df["timestamp"], unit="s")
-
-# =========================
-# USERS
-# =========================
 USERS = {
     "abdullah": {"user_id": 1, "password": "1234", "role": "user"},
     "admin": {"user_id": 2, "password": "admin", "role": "admin"}
 }
 
-# =========================
-# LIFESPAN (SAME LOADING LOGIC)
-# =========================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global similarity_matrix, movie_index_map, movie_metadata, collaborative_model, ALL_MOVIES
-
+    
     def load_pickle(name):
         path = os.path.join(MODEL_DIR, name)
         if os.path.exists(path):
-            with open(path, "rb") as f:
-                return pickle.load(f)
+            try:
+                with open(path, "rb") as f:
+                    return pickle.load(f)
+            except Exception as e:
+                print(f"ERROR: {name}: {e}")
         return None
 
-    collaborative_model = (
-        load_pickle("hybrid_cf_model.pkl")
-        or load_pickle("trained_collaborative_model.pkl")
-    )
-
+    collaborative_model = load_pickle("hybrid_cf_model.pkl") or load_pickle("trained_collaborative_model.pkl")
     similarity_matrix = load_pickle("hybrid_similarity_matrix.pkl")
     movie_index_map = load_pickle("hybrid_movie_index_map.pkl")
-    movie_metadata = (
-        load_pickle("hybrid_movie_metadata.pkl")
-        or load_pickle("movie_metadata.pkl")
-        or {}
-    )
+    movie_metadata = load_pickle("hybrid_movie_metadata.pkl") or load_pickle("movie_metadata.pkl") or {}
 
-    movie_metadata = {int(k): v for k, v in movie_metadata.items()}
-    ALL_MOVIES = list(movie_index_map.keys()) if movie_index_map else []
-
+    if movie_index_map:
+        ALL_MOVIES = list(movie_index_map.keys())
+    
     yield
 
-# =========================
-# APP
-# =========================
 app = FastAPI(
     title="Cinephile API",
     lifespan=lifespan
 )
 
-# =========================
-# MIDDLEWARE
-# =========================
+# --- MIDDLEWARE ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -98,75 +89,60 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# =========================
-# FRONTEND
-# =========================
+# --- FRONTEND ROUTING (FIXED) ---
+
+# 1. Serve the index.html at the ROOT URL "/"
+@app.get("/", include_in_schema=False)
+async def serve_index():
+    index_file = os.path.join(FRONTEND_DIR, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return {
+        "error": "Frontend index.html not found",
+        "checked_path": index_file,
+        "hint": "Check if your folder is named 'frontend' inside 'Script'"
+    }
+
+# 2. Mount the Script/frontend folder so the HTML can find /static/style.css etc.
 if os.path.exists(FRONTEND_DIR):
     app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
-# =========================
-# TMDB
-# =========================
+# --- TMDB & LOGIC ---
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 
 def tmdb_search_movie(title: str):
-    if not TMDB_API_KEY:
-        return {}
+    if not TMDB_API_KEY: return {}
     try:
-        r = requests.get(
-            f"{TMDB_BASE_URL}/search/movie",
-            params={"api_key": TMDB_API_KEY, "query": title},
-            timeout=5
-        )
-        if r.status_code == 200 and r.json().get("results"):
-            return r.json()["results"][0]
-    except:
-        pass
-    return {}
+        r = requests.get(f"{TMDB_BASE_URL}/search/movie", params={"api_key": TMDB_API_KEY, "query": title}, timeout=5)
+        return r.json()["results"][0] if r.status_code == 200 and r.json().get("results") else {}
+    except: return {}
 
 def enrich_movie(movie_id: int):
     meta = movie_metadata.get(movie_id, {})
     title = meta.get("title", "Unknown")
     tmdb_data = tmdb_search_movie(title)
-
     return {
-        "movie_id": movie_id,
+        "movie_id": int(movie_id),
         "title": title,
         "genres": meta.get("genres", "N/A"),
         "cast": meta.get("cast_names", "N/A"),
         "overview": tmdb_data.get("overview"),
-        "poster": (
-            f"https://image.tmdb.org/t/p/w500{tmdb_data['poster_path']}"
-            if tmdb_data.get("poster_path") else None
-        ),
-        "backdrop": (
-            f"https://image.tmdb.org/t/p/w780{tmdb_data['backdrop_path']}"
-            if tmdb_data.get("backdrop_path") else None
-        ),
+        "poster": f"https://image.tmdb.org/t/p/w500{tmdb_data['poster_path']}" if tmdb_data.get("poster_path") else None,
+        "backdrop": f"https://image.tmdb.org/t/p/w780{tmdb_data['backdrop_path']}" if tmdb_data.get("backdrop_path") else None,
         "release_date": tmdb_data.get("release_date"),
         "rating_tmdb": tmdb_data.get("vote_average")
     }
 
-# =========================
-# SCORING (IDENTICAL LOGIC)
-# =========================
 def content_score(user_id: int, movie_id: int):
     if movie_id not in movie_index_map or similarity_matrix is None:
         return 2.75
-
-    try:
-        inner_uid = collaborative_model.trainset.to_inner_uid(int(user_id))
-        user_ratings = collaborative_model.trainset.ur.get(inner_uid, [])
-    except:
-        return 2.75
-
-    if not user_ratings:
-        return 2.75
-
     target_idx = movie_index_map[movie_id]
+    try:
+        user_ratings = collaborative_model.trainset.ur.get(user_id, [])
+    except: return 2.75
+    if not user_ratings: return 2.75
     score_sum, weight_sum = 0.0, 0.0
-
     for inner_iid, rating in user_ratings:
         try:
             raw_id = int(collaborative_model.trainset.to_raw_iid(inner_iid))
@@ -175,12 +151,8 @@ def content_score(user_id: int, movie_id: int):
                 sim = similarity_matrix[target_idx][idx]
                 score_sum += sim * rating
                 weight_sum += abs(sim)
-        except:
-            continue
-
-    if weight_sum == 0:
-        return 2.75
-
+        except: continue
+    if weight_sum == 0: return 2.75
     return 0.5 + 4.5 * np.clip(score_sum / weight_sum, 0.0, 1.0)
 
 def hybrid_predict(user_id: int, movie_id: int, alpha: float):
@@ -188,20 +160,11 @@ def hybrid_predict(user_id: int, movie_id: int, alpha: float):
     cb = content_score(user_id, movie_id)
     return alpha * cf + (1 - alpha) * cb
 
-# =========================
-# HEALTH
-# =========================
-@app.get("/")
+# --- API ENDPOINTS ---
+@app.get("/health")
 def health():
-    return {
-        "status": "ok",
-        "models_loaded": collaborative_model is not None,
-        "total_movies": len(ALL_MOVIES)
-    }
+    return {"status": "ok", "models_loaded": collaborative_model is not None}
 
-# =========================
-# AUTH
-# =========================
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -211,90 +174,42 @@ def login(data: LoginRequest):
     user = USERS.get(data.username)
     if not user or user["password"] != data.password:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    return {
-        "user_id": user["user_id"],
-        "role": user["role"],
-        "username": data.username
-    }
+    return {"user_id": user["user_id"], "role": user["role"], "username": data.username}
 
-# =========================
-# ADMIN STATS (SAFE)
-# =========================
-@app.get("/admin/stats")
-def admin_stats(username: str = Query(None)):
-    if username not in USERS or USERS[username]["role"] != "admin":
-        raise HTTPException(403, "Admin access required")
-
-    return {
-        "total_users": int(sampled_df["userId"].nunique()),
-        "total_movies": int(movies_df["movieId"].nunique()),
-        "total_ratings": int(len(ratings_df)),
-        "recent_ratings": int(len(sampled_df.tail(10)))
-    }
-
-# =========================
-# RECOMMEND
-# =========================
 @app.get("/recommend")
 def recommend(user_id: int, n: int = Query(10, le=50), alpha: float = Query(0.7, ge=0.0, le=1.0)):
     if collaborative_model is None or not ALL_MOVIES:
-        raise HTTPException(503, "Models not loaded")
-
+        raise HTTPException(status_code=503, detail="Models not loaded")
     try:
         inner_uid = collaborative_model.trainset.to_inner_uid(int(user_id))
-        watched = {
-            int(collaborative_model.trainset.to_raw_iid(iid))
-            for iid, _ in collaborative_model.trainset.ur.get(inner_uid, [])
-        }
-    except:
-        return []
-
+        watched = {int(collaborative_model.trainset.to_raw_iid(iid)) for iid, _ in collaborative_model.trainset.ur.get(inner_uid, [])}
+    except: return []
     candidates = [m for m in ALL_MOVIES if m not in watched]
     scores = []
-
     for m in candidates:
-        try:
-            scores.append((m, hybrid_predict(user_id, m, alpha)))
-        except:
-            continue
-
+        try: scores.append((m, hybrid_predict(user_id, m, alpha)))
+        except: continue
     scores.sort(key=lambda x: x[1], reverse=True)
-
     results = []
     for mid, score in scores[:n]:
         data = enrich_movie(mid)
         data["predicted_rating"] = round(float(score), 3)
         results.append(data)
-
     return results
 
-# =========================
-# SIMILAR
-# =========================
-@app.get("/similar")
-def similar_movies(movie_id: int, n: int = 10):
-    if movie_id not in movie_index_map:
-        raise HTTPException(404, "movie not found")
+@app.get("/user/history")
+def user_history(user_id: int):
+    try:
+        inner_uid = collaborative_model.trainset.to_inner_uid(int(user_id))
+        user_ratings = collaborative_model.trainset.ur.get(inner_uid, [])
+        history = []
+        for inner_iid, rating in user_ratings:
+            mid = int(collaborative_model.trainset.to_raw_iid(inner_iid))
+            movie_data = enrich_movie(mid)
+            history.append({"movie_id": mid, "title": movie_data.get("title"), "poster": movie_data.get("poster"), "rating": float(rating)})
+        return history
+    except: return []
 
-    idx = movie_index_map[movie_id]
-    sims = similarity_matrix[idx]
-    pairs = list(enumerate(sims))
-    pairs.sort(key=lambda x: x[1], reverse=True)
-
-    results = []
-    movie_ids = list(movie_index_map.keys())
-
-    for i, sim in pairs[1:n+1]:
-        mid = movie_ids[i]
-        data = enrich_movie(mid)
-        data["similarity"] = round(float(sim), 3)
-        results.append(data)
-
-    return results
-
-# =========================
-# SEARCH
-# =========================
 @app.get("/search")
 def search_movies(query: str = Query(..., min_length=1)):
     results = []
@@ -303,58 +218,41 @@ def search_movies(query: str = Query(..., min_length=1)):
             results.append(enrich_movie(mid))
     return results[:20]
 
-# =========================
-# TRENDING (LOCAL – SAME BEHAVIOR)
-# =========================
-@app.get("/trending")
-def trending(limit: int = Query(20, le=50)):
-    if not ALL_MOVIES:
-        raise HTTPException(503, "Data not loaded")
-    return [enrich_movie(mid) for mid in ALL_MOVIES[:limit]]
+@app.get("/admin/stats")
+def admin_stats(username: str = None):
+    if username != "admin": raise HTTPException(status_code=403, detail="Unauthorized")
+    return {"total_users": len(USERS), "total_movies": len(ALL_MOVIES)}
 
-# =========================
-# GENRE
-# =========================
+    # --- ADD THESE MISSING ROUTES ---
+
+@app.get("/trending")
+def get_trending(limit: int = Query(20, le=50)):
+    # Simple trending logic: return a slice of your movies
+    # Or implement a real 'trending' score if you have one
+    if not ALL_MOVIES:
+        raise HTTPException(status_code=503, detail="Data not loaded")
+    
+    # Example: Return the first 'limit' movies from your metadata
+    results = []
+    for mid in ALL_MOVIES[:limit]:
+        results.append(enrich_movie(mid))
+    return results
+
+@app.get("/movie/{movie_id}")
+def get_movie_details(movie_id: int):
+    if movie_id not in movie_metadata:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    
+    return enrich_movie(movie_id)
+
 @app.get("/recommend/genre")
-def recommend_by_genre(genre: str, n: int = 10):
-    genre = genre.lower()
+def recommend_by_genre(genre: str, n: int = 20):
     results = []
     for mid, meta in movie_metadata.items():
-        if genre in meta.get("genres", "").lower():
+        if genre.lower() in meta.get("genres", "").lower():
             results.append(enrich_movie(mid))
         if len(results) >= n:
             break
+    if not results:
+        raise HTTPException(status_code=404, detail="No movies found for this genre")
     return results
-
-# =========================
-# USER HISTORY
-# =========================
-@app.get("/user/history")
-def user_history(user_id: int):
-    try:
-        inner_uid = collaborative_model.trainset.to_inner_uid(int(user_id))
-        user_ratings = collaborative_model.trainset.ur.get(inner_uid, [])
-    except:
-        return []
-
-    history = []
-    for inner_iid, rating in user_ratings:
-        mid = int(collaborative_model.trainset.to_raw_iid(inner_iid))
-        movie_data = enrich_movie(mid)
-        history.append({
-            "movie_id": mid,
-            "title": movie_data.get("title"),
-            "poster": movie_data.get("poster"),
-            "rating": float(rating)
-        })
-
-    return history
-
-# =========================
-# MOVIE DETAILS
-# =========================
-@app.get("/movie/{movie_id}")
-def movie_details(movie_id: int):
-    if movie_id not in movie_metadata:
-        raise HTTPException(404, "movie not found")
-    return enrich_movie(movie_id)
