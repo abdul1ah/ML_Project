@@ -18,6 +18,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir "numpy<2.0.0"
 
 # 4. Install requirements
+# This will now include 'prefect' from your updated requirements.txt
 COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -28,11 +29,13 @@ COPY --chown=user . .
 USER user
 ENV HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH \
-    PYTHONPATH=/home/user/app
+    PYTHONPATH=/home/user/app \
+    PREFECT_HOME=/home/user/app/.prefect 
 
-# 7. Run Training
-# This ensures matching .pkl files exist before the app starts
-RUN python workflow/train_pipeline.py
+# 7. Create Prefect directory and Run Training
+# We create the folder explicitly to ensure permissions are correct
+RUN mkdir -p /home/user/app/.prefect && \
+    python workflow/train_pipeline.py
 
 # 8. Final settings for Hugging Face
 EXPOSE 7860
