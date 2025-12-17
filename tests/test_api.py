@@ -5,7 +5,8 @@ from Script.fastapi.backend import app
 # The 'with' statement triggers the @asynccontextmanager lifespan (loading models)
 def test_health():
     with TestClient(app) as client:
-        response = client.get("/")
+        # FIX: Changed from "/" to "/health"
+        response = client.get("/health")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
