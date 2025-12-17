@@ -38,6 +38,9 @@ movie_index_map = None
 movie_metadata = {}
 collaborative_model = None
 ALL_MOVIES = []
+sampled_df = pd.DataFrame()
+ratings_df = pd.DataFrame()
+movies_df = pd.DataFrame()
 
 # Load dataframes once at startup
 try:
@@ -228,13 +231,12 @@ def admin_stats(username: str = Query(None)):
     if username != "admin": 
         raise HTTPException(status_code=403, detail="Unauthorized")
     
-    # Defensive check: If LFS failed or files didn't load, return 0s instead of crashing
-    total_users = int(sampled_df["userId"].nunique()) if "userId" in sampled_df.columns else 0
-    total_movies = int(movies_df["movieId"].nunique()) if "movieId" in movies_df.columns else 0
-    total_ratings = int(len(ratings_df)) if 'ratings_df' in globals() else 0
+    total_users = int(sampled_df["userId"].nunique()) if not sampled_df.empty and "userId" in sampled_df.columns else 0
+    total_movies = int(movies_df["movieId"].nunique()) if not movies_df.empty and "movieId" in movies_df.columns else 0
+    total_ratings = int(len(ratings_df)) if not ratings_df.empty else 0
     
     user_metrics = []
-    if "userId" in sampled_df.columns:
+    if not sampled_df.empty and "userId" in sampled_df.columns:
         unique_user_ids = sampled_df['userId'].unique()[:10]
         for uid in unique_user_ids:
             u_ratings = sampled_df[sampled_df['userId'] == uid]
@@ -249,7 +251,7 @@ def admin_stats(username: str = Query(None)):
         "total_users": total_users,
         "total_movies": total_movies,
         "total_ratings": total_ratings,
-        "recent_ratings": int(len(sampled_df.tail(10))) if 'sampled_df' in globals() else 0,
+        "recent_ratings": int(len(sampled_df.tail(10))) if not sampled_df.empty else 0,
         "user_metrics": user_metrics
     }
 
