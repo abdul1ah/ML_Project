@@ -29,42 +29,42 @@ df = pd.read_csv(df_path)
 mapping_df = pd.read_csv(mapping_path)
 
 # -------------------------------
-# NEW: HARDENED COLUMN PARSING
+# FORCE COLUMN ALIGNMENT (Fixes KeyErrors)
 # -------------------------------
-# This cleans column names from hidden BOM characters, spaces, and casing
-mapping_df.columns = [str(c).strip().lower() for c in mapping_df.columns]
-print(f"DEBUG: Cleaned Columns: {list(mapping_df.columns)}")
+# 1. Strip whitespace from headers
+mapping_df.columns = [str(c).strip() for c in mapping_df.columns]
+print(f"DEBUG: Original Columns: {list(mapping_df.columns)}")
 
-# Helper to find columns by partial name
-def find_col(possible_names, default):
-    for name in possible_names:
-        if name in mapping_df.columns:
-            return name
-    return default
+# 2. Map existing columns to standard names used by the script
+col_map = {}
+for c in mapping_df.columns:
+    low_c = c.lower()
+    if low_c in ['movieid', 'id']: col_map[c] = 'movieId'
+    if low_c in ['genres', 'genre']: col_map[c] = 'genres'
+    if low_c in ['title', 'name']: col_map[c] = 'title'
+    if low_c in ['cast']: col_map[c] = 'cast'
 
-# Detect actual column names in your CSV
-GENRE_COL = find_col(['genres', 'genre'], 'genres')
-CAST_COL = find_col(['cast'], 'cast')
-ID_COL = find_col(['movieid', 'id'], 'movieid')
+mapping_df = mapping_df.rename(columns=col_map)
 
-# Ensure columns exist or create dummies to prevent crash
-if GENRE_COL not in mapping_df.columns:
-    print(f"WARNING: '{GENRE_COL}' not found. Creating dummy.")
-    mapping_df['genres'] = "N/A"
-else:
-    mapping_df['genres'] = mapping_df[GENRE_COL].fillna("N/A")
+# 3. Final Fallback: If 'movieId' is still missing, take the first column
+if 'movieId' not in mapping_df.columns:
+    print("WARNING: Could not find movieId column by name. Using first column as ID.")
+    mapping_df = mapping_df.rename(columns={mapping_df.columns[0]: 'movieId'})
 
-if CAST_COL not in mapping_df.columns:
-    mapping_df['cast'] = "[]"
-else:
-    mapping_df['cast'] = mapping_df[CAST_COL].fillna("[]")
+# 4. Fill missing columns with N/A to prevent crashes
+for req in ['genres', 'cast', 'title']:
+    if req not in mapping_df.columns:
+        print(f"WARNING: '{req}' column missing. Creating dummy column.")
+        mapping_df[req] = "N/A"
+
+mapping_df['genres'] = mapping_df['genres'].fillna("N/A")
+mapping_df['cast'] = mapping_df['cast'].fillna("[]")
 
 # -------------------------------
 # Process Movie Metadata
 # -------------------------------
 def extract_cast_names(cast_str, top_n=5):
     try:
-        # Handle already parsed lists or JSON strings
         if isinstance(cast_str, list):
             cast_list = cast_str
         else:
@@ -76,8 +76,8 @@ def extract_cast_names(cast_str, top_n=5):
 
 mapping_df['cast_names'] = mapping_df['cast'].apply(extract_cast_names)
 
-# Create movie_info dictionary (using Detected ID Column)
-movie_info = mapping_df.set_index(ID_COL)[['title', 'genres', 'cast_names']].to_dict(orient='index')
+# Create movie_info dictionary - Now guaranteed to have 'movieId'
+movie_info = mapping_df.set_index('movieId')[['title', 'genres', 'cast_names']].to_dict(orient='index')
 movie_info = {int(k): v for k, v in movie_info.items()}
 
 # Ensure all movies in ratings are in movie_info
