@@ -1,13 +1,30 @@
-# Ignore local python environment
-venv/
-__pycache__/
-*.pyc
+# 1. Block the Heavy Weights (The 800MB+ culprits)
+*.pkl
+*.bin
+Script/saved_models/
+models/
 
-# Ignore data/logs that aren't needed for the app to run
-*.ipynb
-*.log
+# 2. Block Large Data Files
+# (Only keep this if your script downloads/generates data on the fly)
+Data/*.csv
+Data/*.json
+!Data/sampled_data.csv  # Use the '!' if you need this SPECIFIC small file to train
+
+# 3. Block Git History (This can be huge)
 .git
+.gitignore
 .github
 
-# Ignore OS specific files
+# 4. Block Python Garbage
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.env
+.venv/
+venv/
+env/
+
+# 5. Block OS Junk
 .DS_Store
+Thumbs.db
