@@ -90,5 +90,13 @@ jobs:
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
-          # We use --force to ensure we overwrite the remote with our "cleaned" version
+          
+          # 1. Remove the Data folder from the current "push" index
+          # This makes Git "forget" the large files for this specific push
+          git rm -rf --cached Data/ || echo "Data not in index"
+          
+          # 2. Commit this "lightweight" state locally
+          git commit -m "Internal: Remove heavy data for HF sync" || echo "Nothing to commit"
+          
+          # 3. Force push this cleaned version
           git push --force https://Abdullah-32:$HF_TOKEN@huggingface.co/spaces/Abdullah-32/Cinephile_Hub main
