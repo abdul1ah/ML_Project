@@ -3,20 +3,21 @@
 *.bin
 Script/saved_models/
 models/
+artifacts/
 
-# 2. Block Large Data Files
-# (Only keep this if your script downloads/generates data on the fly)
-Data/*.csv
-Data/*.json
-!Data/sampled_data.csv  # Use the '!' if you need this SPECIFIC small file to train
+# 2. Block Large Data Files but KEEP the training set
+# We block all CSVs first, then "unblock" the specific one needed for training
+Data/*
+!Data/sampled_data.csv
 
-# 3. Block Git History (This can be huge)
+# 3. Block Git and GitHub (Major source of hidden bulk)
 .git
-.gitignore
 .github
+.gitignore
+*.md
 
-# 4. Block Python Garbage
-__pycache__/
+# 4. Block Python and Test Garbage
+**/__pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
@@ -24,7 +25,12 @@ __pycache__/
 .venv/
 venv/
 env/
+tests/
+.ipynb_checkpoints/
 
-# 5. Block OS Junk
+# 5. Block OS Junk and Archives
 .DS_Store
 Thumbs.db
+*.zip
+*.tar.gz
+*.7z

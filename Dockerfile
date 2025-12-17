@@ -1,30 +1,35 @@
 FROM python:3.9-slim
 
-# Create the user first
+# 1. Create the user
 RUN useradd -m -u 1000 user
 WORKDIR /home/user/app
 
-# System dependencies
+# 2. Lighten the system dependencies
+# We swap 'build-essential' for specific tools to avoid the Trixie-security bottleneck
 RUN apt-get update && apt-get install -y \
-    build-essential \
+    gcc \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install requirements
+# 3. Install requirements
+# Copy only requirements first to leverage Docker cache
 COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy all files and set ownership to 'user'
+# 4. Copy the rest of the application
 COPY --chown=user . .
 
-# Switch to the non-root user BEFORE training
+# 5. Set up Environment and User
 USER user
 ENV HOME=/home/user \
-    PATH=/home/user/.local/bin:$PATH
+    PATH=/home/user/.local/bin:$PATH \
+    PYTHONPATH=/home/user/app
 
-# Now train the model (the .pkl files will be owned by 'user')
+# 6. Run Training
+# This generates the .pkl files inside the container
 RUN python workflow/train_pipeline.py
 
-# Final settings
+# 7. Final settings for Hugging Face
 EXPOSE 7860
 CMD ["uvicorn", "Script.fastapi.backend:app", "--host", "0.0.0.0", "--port", "7860"]
